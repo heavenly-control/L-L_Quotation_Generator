@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L&L Quotation Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0f2f5;color:#1a1a1a;font-size:14px}
+
+/* HEADER */
+.hdr{background:#1e293b;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99}
+.hdr-l{display:flex;flex-direction:column;gap:2px}
+.hdr-name{color:#f1f5f9;font-size:15px;font-weight:600}
+.hdr-sub{color:#94a3b8;font-size:11px}
+.ref-chip{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:5px;padding:5px 12px;color:#93c5fd;font-size:12px;font-weight:600;font-family:monospace}
+
+/* LAYOUT */
+.wrap{max-width:720px;margin:0 auto;padding:24px 16px 80px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px;overflow:hidden}
+.card-head{padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;background:#f8fafc}
+.badge{width:22px;height:22px;border-radius:50%;background:#2563eb;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-head h2{font-size:13px;font-weight:600}
+.card-body{padding:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.c2{grid-column:span 2}
+.field{display:flex;flex-direction:column;gap:4px}
+.lbl{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
+.req{color:#dc2626}
+.hint{font-size:11px;color:#94a3b8}
+
+/* INPUTS */
+input,select,textarea{font-family:'Inter',sans-serif;font-size:13px;color:#1a1a1a;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:7px;padding:8px 11px;width:100%;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;cursor:pointer}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);background:#fff}
+input.err,select.err{border-color:#dc2626}
+textarea{resize:vertical;min-height:52px}
+
+/* JOB TYPE SELECTOR */
+.jt-groups{display:flex;flex-direction:column;gap:14px}
+.jt-group-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.jt-group{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:14px}
+.jt-group.maa-group{border-color:#c7d2fe}
+.jt-group.aa-group{border-color:#bbf7d0}
+.jt-group-name{font-size:12px;font-weight:700;color:#1e293b;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.jt-group-name .gt{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700}
+.maa-group .gt{background:#e0e7ff;color:#3730a3}
+.aa-group .gt{background:#dcfce7;color:#166534}
+.jt-btns{display:flex;flex-wrap:wrap;gap:8px}
+.jt-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #e2e8f0;border-radius:8px;background:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#475569;cursor:pointer;transition:all .15s;user-select:none}
+.jt-btn:hover{border-color:#94a3b8;background:#f1f5f9}
+.jt-btn.sel-maa{border-color:#6366f1;background:#eef2ff;color:#4338ca}
+.jt-btn.sel-aa{border-color:#22c55e;background:#f0fdf4;color:#15803d}
+.jt-btn .jt-dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;transition:background .15s}
+.jt-btn.sel-maa .jt-dot{background:#6366f1}
+.jt-btn.sel-aa .jt-dot{background:#22c55e}
+.jt-preview{margin-top:10px;font-size:12px;color:#64748b;min-height:16px}
+.jt-preview strong{color:#1e293b}
+.qrow{display:flex}
+.qpre{background:#1e293b;color:#93c5fd;font-size:13px;font-weight:600;padding:8px 11px;border-radius:7px 0 0 7px;border:1.5px solid #1e293b;border-right:none;white-space:nowrap;font-family:monospace;display:flex;align-items:center}
+.qrow input{border-radius:0 7px 7px 0;border-left:none;font-family:monospace;font-weight:600}
+
+/* SCOPE TABLE */
+.scope-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.scope-table th{background:#1e293b;color:#cbd5e1;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;border:1px solid #334155;text-align:left}
+.scope-table th.right,.scope-table td.right{text-align:right}
+.scope-table th.center,.scope-table td.center{text-align:center}
+.scope-table td{padding:0;border:1px solid #e2e8f0;vertical-align:top}
+
+/* scope row states */
+.scope-table tbody tr{transition:background .12s}
+.scope-table tbody tr.row-on{background:#f0fdf4}
+.scope-table tbody tr.row-off{background:#fafafa;opacity:.55}
+.scope-table tbody tr.fixed-row{background:#f8fafc!important;opacity:1}
+
+/* checkbox cell — replaced by checkmark display */
+.td-chk{width:40px;text-align:center;vertical-align:middle!important;cursor:pointer}
+.chk-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;border:2px solid #cbd5e1;background:#fff;font-size:15px;transition:all .15s;cursor:pointer;user-select:none}
+.chk-btn.checked{background:#16a34a;border-color:#16a34a;color:#fff}
+.chk-btn.disabled{background:#f1f5f9;border-color:#e2e8f0;cursor:default}
+
+.td-desc{min-width:180px}
+.desc-wrap{display:flex;flex-direction:column}
+.desc-main input{border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 9px!important;font-size:13px!important;width:100%!important}
+.desc-main input:focus{background:#f0fdf4!important}
+
+/* note box */
+.note-row{border-top:1px dashed #e2e8f0;background:#fffdf0}
+.note-wrap{display:flex;align-items:flex-start;gap:5px;padding:4px 9px}
+.note-icon{font-size:9px;font-weight:700;color:#a16207;background:#fef9c3;border:1px solid #fde68a;border-radius:3px;padding:1px 4px;white-space:nowrap;margin-top:3px;letter-spacing:.3px}
+.note-wrap textarea{border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:2px 4px!important;font-size:11.5px!important;color:#78350f!important;min-height:30px!important;resize:vertical}
+.note-wrap textarea::placeholder{color:#d97706;opacity:.6}
+.note-wrap textarea:focus{background:#fefce8!important}
+
+.td-qty input{border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 4px!important;font-size:13px!important;width:52px!important;text-align:center!important}
+.td-qty input:focus{background:#f0fdf4!important}
+.td-price input{border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 6px!important;font-size:13px!important;width:88px!important;text-align:right!important;font-weight:600!important}
+.td-price input:focus{background:#f0fdf4!important}
+.td-sub{min-width:76px}
+.sub-val{font-size:13px;font-weight:600;color:#1a1a1a;text-align:right;padding:7px 9px;display:block}
+.td-rm{width:30px;text-align:center;vertical-align:middle!important}
+.rmbtn{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:16px;line-height:1;transition:color .12s}
+.rmbtn:hover{color:#dc2626}
+.td-inner{padding:7px 9px;font-size:13px}
+
+.addbtn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px dashed #cbd5e1;border-radius:7px;background:none;color:#2563eb;font-size:13px;font-weight:500;cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:background .12s,border-color .12s}
+.addbtn:hover{background:#eff6ff;border-color:#2563eb}
+.tbar{background:#1e293b;border-radius:7px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.tbar-l{color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tval{color:#7dd3fc;font-size:18px;font-weight:700;font-family:monospace}
+
+/* PAYMENT */
+.payopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.paycard{border:2px solid #e2e8f0;border-radius:9px;padding:13px 14px;cursor:pointer;position:relative;transition:border-color .12s,background .12s}
+.paycard:hover{border-color:#93c5fd;background:#f0f9ff}
+.paycard.sel{border-color:#2563eb;background:#eff6ff}
+.paycard input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.ptag{display:inline-block;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-bottom:4px}
+.paycard.sel .ptag{background:#2563eb;color:#fff}
+.ptitle{font-size:13px;font-weight:600;margin-bottom:2px}
+.pdesc{font-size:11px;color:#64748b;line-height:1.4}
+
+/* TERMS — checkmark style */
+.tlist{display:flex;flex-direction:column;gap:5px}
+.trow{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:7px;border:1.5px solid #e2e8f0;background:#f8fafc;cursor:pointer;transition:border-color .12s,background .12s}
+.trow:hover{border-color:#86efac;background:#f0fdf4}
+.trow.on{background:#f0fdf4;border-color:#4ade80}
+.trow.off{background:#fafafa;border-color:#e2e8f0;opacity:.6}
+.tc-mark{width:22px;height:22px;min-width:22px;border-radius:5px;border:2px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .12s;flex-shrink:0;margin-top:1px}
+.trow.on .tc-mark{background:#16a34a;border-color:#16a34a;color:#fff}
+.trow.off .tc-mark{background:#f1f5f9;border-color:#e2e8f0;color:transparent}
+.tnum{font-size:11px;font-weight:700;color:#16a34a;min-width:16px;margin-top:2px}
+.trow.off .tnum{color:#94a3b8}
+.ttxt{font-size:11.5px;color:#374151;line-height:1.45}
+.trow.off .ttxt{color:#9ca3af}
+.extra-tc-wrap{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.extra-tc-head{display:flex;align-items:center;gap:7px;padding:2px 0 4px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
+.extra-tc-head .badge-extra{background:#e0e7ff;color:#3730a3;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase}
+.etc-row{display:flex;align-items:flex-start;gap:9px;border:1.5px solid #e2e8f0;border-radius:7px;background:#f8fafc;padding:8px 10px;transition:border-color .12s}
+.etc-row.etc-on{background:#f0fdf4;border-color:#4ade80}
+.etc-row.etc-off{opacity:.55;background:#fafafa;border-color:#e2e8f0}
+.etc-chk-btn{width:22px;height:22px;min-width:22px;border-radius:5px;border:2px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;user-select:none;flex-shrink:0;margin-top:2px;transition:all .12s}
+.etc-chk-btn.on{background:#16a34a;border-color:#16a34a;color:#fff}
+.etc-textarea{flex:1;border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;font-size:12.5px!important;color:#374151!important;min-height:34px!important;resize:vertical;line-height:1.5;font-family:'Inter',sans-serif}
+.etc-textarea:focus{outline:none}
+.etc-rm{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:17px;line-height:1;padding:0 2px;flex-shrink:0;margin-top:1px;transition:color .12s}
+.etc-rm:hover{color:#dc2626}
+
+/* GEN BTN */
+.genwrap{text-align:center;margin-top:20px}
+.genbtn{background:#2563eb;color:#fff;border:none;border-radius:9px;padding:13px 40px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,transform .1s;box-shadow:0 4px 12px rgba(37,99,235,.25)}
+.genbtn:hover{background:#1d4ed8;transform:translateY(-1px)}
+.genbtn:active{transform:translateY(0)}
+.genbtn svg{width:16px;height:16px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:500;border-left:4px solid #2563eb;transition:transform .25s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{border-left-color:#dc2626}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.c2{grid-column:span 1}.payopts{grid-template-columns:1fr}.wrap{padding:16px 10px 80px}}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-l">
+    <span class="hdr-name">L&amp;L Engineering Consultant</span>
+    <span class="hdr-sub">MAA Quotation Generator</span>
+  </div>
+  <div class="ref-chip" id="ref-chip">Q(L&amp;L26___)</div>
+</div>
+<div class="wrap">
+
+<!-- 1 — JOB TYPE -->
+<div class="card">
+  <div class="card-head"><div class="badge">1</div><h2>Job Type</h2></div>
+  <div class="card-body">
+    <div class="jt-groups">
+      <!-- M.A.A Group — single select -->
+      <div class="jt-group maa-group">
+        <div class="jt-group-name">M.A.A <span class="gt">Single select</span></div>
+        <div class="jt-btns">
+          <button class="jt-btn" id="jt-maa" onclick="selectMAA()">
+            <span class="jt-dot"></span>M.A.A
+          </button>
+        </div>
+      </div>
+      <!-- A&A Group — multi select -->
+      <div class="jt-group aa-group">
+        <div class="jt-group-name">A&amp;A <span class="gt">Multi select</span></div>
+        <div class="jt-btns">
+          <button class="jt-btn" id="jt-bp" onclick="toggleAA('bp')"><span class="jt-dot"></span>BP</button>
+          <button class="jt-btn" id="jt-fp" onclick="toggleAA('fp')"><span class="jt-dot"></span>FP</button>
+          <button class="jt-btn" id="jt-mv" onclick="toggleAA('mv')"><span class="jt-dot"></span>MV</button>
+          <button class="jt-btn" id="jt-ks" onclick="toggleAA('ks')"><span class="jt-dot"></span>KS</button>
+        </div>
+      </div>
+    </div>
+    <div class="jt-preview" id="jt-preview">No job type selected yet</div>
+  </div>
+</div>
+
+<!-- 2 — QUOTATION REF & DATE -->
+<div class="card">
+  <div class="card-head"><div class="badge">2</div><h2>Quotation Reference &amp; Date</h2></div>
+  <div class="card-body">
+    <div class="grid">
+      <div class="field">
+        <label class="lbl">Quotation Number <span class="req">*</span></label>
+        <div class="qrow">
+          <span class="qpre" id="qpre">Q(L&amp;L26</span>
+          <input type="text" id="qnum" placeholder="***" maxlength="3" inputmode="numeric" oninput="syncPreview()">
+        </div>
+        <span class="hint">Year in prefix auto-matches the quotation date year.</span>
+      </div>
+      <div class="field">
+        <label class="lbl">Quotation Date <span class="req">*</span></label>
+        <input type="date" id="qdate" onchange="onDateChange()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3 — CLIENT INFO -->
+<div class="card">
+  <div class="card-head"><div class="badge">3</div><h2>Client Information</h2></div>
+  <div class="card-body">
+    <div class="grid">
+      <div class="field">
+        <label class="lbl">Salutation <span class="req">*</span></label>
+        <select id="sal"><option value="">Select...</option><option>Mr.</option><option>Ms.</option><option>Mdm</option><option>Dr.</option><option>Sir/Madam</option></select>
+      </div>
+      <div class="field">
+        <label class="lbl">Client Name <span class="req">*</span></label>
+        <input type="text" id="cname" placeholder="e.g. Lai Huoy Ling">
+      </div>
+      <div class="field c2">
+        <label class="lbl">Company / Organisation</label>
+        <input type="text" id="cco" placeholder="e.g. WPL Projects Pte Ltd">
+      </div>
+      <div class="field c2">
+        <label class="lbl">Company Address (line 1)</label>
+        <input type="text" id="cadd1" placeholder="e.g. 61 Woodlands Industrial Park E9">
+      </div>
+      <div class="field c2">
+        <label class="lbl">Company Address (line 2)</label>
+        <input type="text" id="cadd2" placeholder="e.g. #03-32, E9 Premium">
+      </div>
+      <div class="field c2">
+        <label class="lbl">Company Address (line 3 / postal)</label>
+        <input type="text" id="cadd3" placeholder="e.g. Singapore 757047">
+      </div>
+      <div class="field">
+        <label class="lbl">Client Tel</label>
+        <input type="text" id="ctel" placeholder="e.g. 6265 4279" inputmode="tel">
+      </div>
+      <div class="field">
+        <label class="lbl">Client Email <span class="req">*</span></label>
+        <input type="email" id="cemail" placeholder="client@email.com">
+      </div>
+      <div class="field">
+        <label class="lbl">Attention To</label>
+        <input type="text" id="cattn" placeholder="e.g. Ms Christy">
+      </div>
+      <div class="field">
+        <label class="lbl">Attention HP</label>
+        <input type="text" id="cattnhp" placeholder="e.g. 9232 9327" inputmode="tel">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4 — JOB DETAILS -->
+<div class="card">
+  <div class="card-head"><div class="badge">4</div><h2>Job Details</h2></div>
+  <div class="card-body">
+    <div class="grid">
+      <div class="field">
+        <label class="lbl">Location / Unit <span class="req">*</span></label>
+        <input type="text" id="jloc" placeholder="e.g. PLQ #02-21">
+      </div>
+      <div class="field">
+        <label class="lbl">Description</label>
+        <input type="text" id="jdesc" placeholder="e.g. Existing Shop">
+      </div>
+      <div class="field">
+        <label class="lbl">Commencement Month <span class="req">*</span></label>
+        <select id="cmonth">
+          <option value="">Select month...</option>
+          <option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl">Commencement Year</label>
+        <select id="cyear">
+          <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 — SCOPE & PRICING -->
+<div class="card">
+  <div class="card-head"><div class="badge">5</div><h2>Scope of Work &amp; Pricing</h2></div>
+  <div class="card-body">
+    <table class="scope-table" id="scope-table">
+      <thead>
+        <tr>
+          <th class="td-chk" style="width:40px"></th>
+          <th class="td-desc">Description</th>
+          <th class="right" style="width:100px">Price per unit ($)</th>
+          <th class="center" style="width:70px">Quantity</th>
+          <th class="right" style="width:82px">Total</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="scope-body">
+        <!-- job-type rows injected by JS -->
+        <tr id="row-scdf" class="row-on">
+          <td class="td-chk" onclick="toggleScope('scdf')">
+            <div class="chk-btn checked" id="chkbtn-scdf">&#10003;</div>
+            <input type="checkbox" id="chk-scdf" checked style="display:none">
+          </td>
+          <td class="td-desc"><span class="td-inner">Fees make payable to S.C.D.F. <em style="font-size:11px;color:#94a3b8">($90.00 per plan)</em></span></td>
+          <td class="td-price right"><span class="td-inner" style="font-weight:600;color:#64748b">$90.00</span></td>
+          <td class="td-qty center"><input type="number" id="qty-scdf" value="1" min="1" step="1" oninput="calcScdf()"></td>
+          <td class="td-sub right"><span class="sub-val" id="sub-scdf">$90.00</span></td>
+          <td class="td-rm"></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="addbtn" onclick="addScope()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Add scope item
+    </button>
+    <div class="tbar"><span class="tbar-l">Total</span><span class="tval" id="tval">$0.00</span></div>
+  </div>
+</div>
+
+<!-- 6 — TERMS OF PAYMENT -->
+<div class="card">
+  <div class="card-head"><div class="badge">6</div><h2>Terms of Payment</h2></div>
+  <div class="card-body">
+    <div class="payopts">
+      <label class="paycard" id="opt-split5050" onclick="setPay('split5050')">
+        <input type="radio" name="pay" value="split5050">
+        <div class="ptag">50/50</div>
+        <div class="ptitle">Split Payment</div>
+        <div class="pdesc">50% upfront (non-refundable) &middot; 50% balance on completion within 7 days</div>
+      </label>
+      <label class="paycard" id="opt-split" onclick="setPay('split')">
+        <input type="radio" name="pay" value="split">
+        <div class="ptag">80/20</div>
+        <div class="ptitle">Split Payment</div>
+        <div class="pdesc">80% upfront (non-refundable) &middot; 20% balance on completion within 7 days</div>
+      </label>
+      <label class="paycard" id="opt-full" onclick="setPay('full')">
+        <input type="radio" name="pay" value="full">
+        <div class="ptag">FULL</div>
+        <div class="ptitle">Full Payment</div>
+        <div class="pdesc">Full payment upon completion, within 7 days of invoice</div>
+      </label>
+      <label class="paycard" id="opt-custom" onclick="setPay('custom')">
+        <input type="radio" name="pay" value="custom">
+        <div class="ptag">CUSTOM</div>
+        <div class="ptitle">Custom Split</div>
+        <div class="pdesc">Manually specify your own split percentages</div>
+      </label>
+    </div>
+    <div id="custom-pay-wrap" style="display:none;margin-top:12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Custom Split Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label class="lbl">Upfront % <span class="req">*</span></label>
+          <input type="number" id="custom-pct1" placeholder="e.g. 70" min="1" max="99" step="1" oninput="syncCustomPct()">
+          <span class="hint" id="custom-pct2-hint">Balance: —%</span>
+        </div>
+        <div class="field">
+          <label class="lbl">Upfront payment note</label>
+          <input type="text" id="custom-note1" placeholder="e.g. non-refundable">
+        </div>
+        <div class="field c2">
+          <label class="lbl">Balance payment duration</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="custom-dur-num" placeholder="e.g. 7" min="1" step="1" style="max-width:90px">
+            <select id="custom-dur-unit" style="flex:1">
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+          <span class="hint">Used as: "within X days/weeks/months upon receipt of our invoice"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7 — TERMS & CONDITIONS -->
+<div class="card">
+  <div class="card-head"><div class="badge">7</div><h2>Terms &amp; Conditions</h2></div>
+  <div class="card-body">
+    <p class="hint" style="margin-bottom:10px">&#10003; = included in quotation &nbsp;|&nbsp; Click any clause to toggle</p>
+    <div class="tlist" id="tlist"></div>
+    <div class="extra-tc-wrap">
+      <div class="extra-tc-head">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#3730a3" stroke-width="2" stroke-linecap="round"/></svg>
+        Additional Terms &amp; Conditions
+        <span class="badge-extra">Optional</span>
+      </div>
+      <div id="etc-list"></div>
+      <button class="addbtn" onclick="addETC()" style="margin-top:2px">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add extra clause
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="genwrap">
+  <button class="genbtn" onclick="makePDF()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    Generate Quotation PDF
+  </button>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── JOB TYPE STATE ───────────────────────────────────────────────────────────
+let jtMode='';        // 'maa' or 'aa'
+let aaSelected=new Set(); // 'bp','fp','mv','ks'
+
+const AA_LABELS={bp:'BP',fp:'FP',mv:'MV',ks:'KS'};
+const AA_FULLNAMES={bp:'Building Plan',fp:'Sprinkler Plan',mv:'Mechanical Ventilation Plan',ks:'Kitchen Suppression Plan'};
+
+function selectMAA(){
+  jtMode='maa';
+  aaSelected.clear();
+  document.getElementById('jt-maa').classList.add('sel-maa');
+  ['bp','fp','mv','ks'].forEach(k=>document.getElementById(`jt-${k}`).classList.remove('sel-aa'));
+  updateJTPreview();
+  buildJobTypeRows();
+  syncPreview();
+}
+
+function toggleAA(key){
+  jtMode='aa';
+  document.getElementById('jt-maa').classList.remove('sel-maa');
+  if(aaSelected.has(key)){aaSelected.delete(key);document.getElementById(`jt-${key}`).classList.remove('sel-aa');}
+  else{aaSelected.add(key);document.getElementById(`jt-${key}`).classList.add('sel-aa');}
+  if(aaSelected.size===0)jtMode='';
+  updateJTPreview();
+  buildJobTypeRows();
+  syncPreview();
+}
+
+function getTypeSuffix(){
+  if(jtMode==='maa')return'MAA';
+  if(jtMode==='aa'&&aaSelected.size>0){
+    const order=['bp','fp','mv','ks'];
+    return order.filter(k=>aaSelected.has(k)).map(k=>AA_LABELS[k]).join('+');
+  }
+  return'';
+}
+
+// Get the Re: line plan description based on selection
+function getReText(){
+  if(jtMode==='maa') return'QUOTATION FOR M.A.A PLAN SUBMISSION TO S.C.D.F. AT';
+  const order=['bp','fp','mv','ks'];
+  const sel=order.filter(k=>aaSelected.has(k));
+  if(sel.length===1){
+    const planNames={
+      bp:'BUILDING PLAN',
+      fp:'SPRINKLER PLAN',
+      mv:'MECHANICAL VENTILATION PLAN',
+      ks:'KITCHEN SUPPRESSION PLAN'
+    };
+    return`QUOTATION FOR ${planNames[sel[0]]} SUBMISSION TO S.C.D.F. AT`;
+  }
+  return'QUOTATION FOR PLANS SUBMISSION TO S.C.D.F. AT';
+}
+
+function updateJTPreview(){
+  const el=document.getElementById('jt-preview');
+  const suf=getTypeSuffix();
+  if(!suf){el.innerHTML='No job type selected yet';return;}
+  if(jtMode==='maa'){el.innerHTML='<strong>M.A.A</strong> — Minor Addition &amp; Alteration plan submission to SCDF';}
+  else{
+    const order=['bp','fp','mv','ks'];
+    const names=order.filter(k=>aaSelected.has(k)).map(k=>`<strong>${AA_LABELS[k]}</strong> (${AA_FULLNAMES[k]})`);
+    el.innerHTML='A&amp;A: '+names.join(', ');
+  }
+}
+
+const TERMS_MAA=[
+  "Commencement of work is scheduled to begin in {MONTH} {YEAR} subject to current government measures on Covid-19 situation and building management approval and procedures.",
+  "The progress of work will be subjected to manpower availability, it could be correlated to the Covid-19 situation and government policies.",
+  "We should not be responsible and liable for any work delay due to COVID-19 related matters (i.e. Leave of Absence (LOA), Stay-Home Notice (SHN), Quarantine Order (QO), hospitalisation and others), shortage of manpower.",
+  "Raised floor / platform is not allowable to be submitted under M.A.A. plan submission.",
+  "Only non-flammable and non-combustible materials must be used for wall, partition and ceiling. Acrylic and polycarbonate materials are not allowed.",
+  "Existing layout plan and new layout plan must comply with S.C.D.F.'s rules and regulations.",
+  "Walkway or corridor must maintain minimum of 1200mm clear width for shop / office.",
+  "Kindly furnish the existing, proposed and new layout plan in autocad format.",
+  "You are required to ensure that the new and existing layout comply with the S.C.D.F. rules for hosereel, call point & bell, that is the furthest point at the premises to the hose reel must be within 30m.",
+  "There are two steps to apply for Acceptance Letter under MAA. The first step is the application to obtain the In-Principal Agreement, which takes about 8 working days. The second step is to wait for the completion of renovations/sprinkler works then submit the M.A.A plan to S.C.D.F for approval.",
+  "Sprinkler work, installation of exit light/s, battery pack emergency light/s, partition/s, wall/s, door/s and extinguisher/s must be completed before the opening and/or operation of premises. Only upon completion and in compliance, we will then submit the as-built plan to SCDF to obtain MAA Acceptance Letter. The duration takes to issuing the acceptance letter (from SCDF) will depend on SCDF. Generally, it will take about 7 working day.",
+  "You are required to keep us informed on the commencement of renovation work and commencement of sprinkler work.",
+  "This quotation will be voided if this submission does not comply with the SCDF MAA rules and regulations.",
+  "If alteration of sprinkler points exceed nine points, MAA submission is not allowed.",
+  "Non-combustible and non-flammable material must be used for the walls and ceiling. Acrylic and polycarbonate materials are not allowed."
+];
+
+const TERMS_AA=[
+  "Commencement of work is scheduled to begin in {MONTH} {YEAR} subject to current government measures on Covid-19 situation and building management approval and procedures.",
+  "The progress of work will be subjected to manpower availability, it could be correlated to the Covid-19 situation and government policies.",
+  "We should not be responsible and liable for any work delay due to COVID-19 related matters (i.e. Leave of Absence (LOA), Stay-Home Notice (SHN), Quarantine Order (QO), hospitalisation and others).",
+  "Existing layout plan and new layout plan must comply with F.S.S.D.'s rules and regulations.",
+  "Kindly furnish the existing, proposed, new layout plan and sprinkler head and piping plan in auto-cad format.",
+  "All required forms i.e. Authorization letter from tenant must be given to QP three weeks before commencement of renovation work.",
+  "Sprinkler Plan must be submitted two weeks before the commencement of renovation work.",
+  "Upon making payment after receiving the Acknowledgement letter, NOA takes about two weeks to obtain. We shall not be held responsible for any delay in obtaining NOA or FSC. If the submission is picked for audit check or enquiry by SCDF, it will require a longer period of time.",
+  "Upon inspection at site, Registered Inspector(s) will issue form 1, enabling the application for FSC which requires about 16 working days on condition it does not get picked up for audit check or enquiry by SCDF.",
+  "Whilst we endeavour to make as complete a submission to FSSD as possible, we shall not be liable for errors and omissions which may result in reasonable delay in issuing approval and FSC by authorities.",
+  "In general, for the application of FSC, from submission of plans to obtaining FSC require about 14 weeks on condition it does not get picked up for audit check or enquiry by SCDF.",
+  "Sprinkler work, etc., must be completed properly and in accordance to drawing and SCDF by law before calling for the R.I. for inspection. If the installation is not in accordance to SCDF requirement, we will not be able to obtain R.I. Form 1, which results in a delay to obtain FSC indefinitely.",
+  "Kindly provide AutoCAD drawing for kitchen supply and exhaust duct, with calculation for kitchen hood.",
+  "Kindly provide AutoCAD drawing for the kitchen fire suppression plan including the calculation and operation sequences, isometric, layout etc.",
+  "To Note : Kitchen Suppression System must design in accordance with the Provisions of NFPA 17A : 2021."
+];
+
+const TERMS=TERMS_MAA; // default — will be overridden in makePDF based on jtMode
+
+// ── JOB TYPE DESC MAPPING ────────────────────────────────────────────────
+const JT_DESC={
+  maa:'M.A.A plan submission to S.C.D.F',
+  bp:'Preparation of Building Plan which is to be submitted to S.C.D.F',
+  fp:'Preparation of Sprinkler Plan which is to be submitted to S.C.D.F',
+  ks:'Preparation of Kitchen Suppression Plan which is to be submitted to S.C.D.F',
+  mv:'Preparation of Mechanical Ventilation Plan which is to be submitted to S.C.D.F'
+};
+
+// Build/rebuild the dynamic job-type scope rows
+function buildJobTypeRows(){
+  const tbody=document.getElementById('scope-body');
+  const scdfRow=document.getElementById('row-scdf');
+  // Remove existing jt rows
+  tbody.querySelectorAll('.jt-scope-row').forEach(r=>r.remove());
+
+  if(!jtMode) return;
+
+  const keys = jtMode==='maa' ? ['maa'] : ['bp','fp','mv','ks'].filter(k=>aaSelected.has(k));
+  const isMulti = keys.length > 1;
+
+  keys.forEach((key, idx)=>{
+    const desc = JT_DESC[key]||key;
+    const isFirst = idx===0;
+    const tr=document.createElement('tr');
+    tr.id=`row-jt-${key}`;
+    tr.className='row-on jt-scope-row';
+
+    // For multi: price/qty/total cells only on first row (rowspan), rest are desc-only rows
+    if(!isMulti || isFirst){
+      const priceCell = isMulti
+        ? `<td class="td-price right" rowspan="${keys.length}" style="vertical-align:middle;border-left:1px solid #e2e8f0">
+             <input type="number" id="price-jt-main" placeholder="****.**" min="0" step="0.01" oninput="calcJTRows()" style="border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 6px!important;font-size:13px!important;width:100%!important;text-align:right!important;font-weight:600!important">
+           </td>
+           <td class="td-qty center" rowspan="${keys.length}" style="vertical-align:middle;border-left:1px solid #e2e8f0">
+             <span class="td-inner" style="display:block;text-align:center;color:#64748b;font-size:12px">Lump Sum</span>
+           </td>
+           <td class="td-sub right" rowspan="${keys.length}" style="vertical-align:middle;border-left:1px solid #e2e8f0">
+             <span class="sub-val" id="sub-jt-main">—</span>
+           </td>`
+        : `<td class="td-price right">
+             <input type="number" id="price-jt-main" placeholder="****.**" min="0" step="0.01" oninput="calcJTRows()" style="border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 6px!important;font-size:13px!important;width:100%!important;text-align:right!important;font-weight:600!important">
+           </td>
+           <td class="td-qty center">
+             <input type="number" id="qty-jt-main" value="1" min="1" step="1" oninput="calcJTRows()" style="border:none!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:7px 4px!important;font-size:13px!important;width:52px!important;text-align:center!important">
+           </td>
+           <td class="td-sub right"><span class="sub-val" id="sub-jt-main">—</span></td>`;
+      tr.innerHTML=`
+        <td class="td-chk" onclick="toggleScope('jt-${key}')">
+          <div class="chk-btn checked" id="chkbtn-jt-${key}">&#10003;</div>
+          <input type="checkbox" id="chk-jt-${key}" checked style="display:none">
+        </td>
+        <td class="td-desc">
+          <div class="desc-wrap">
+            <div class="desc-main"><input type="text" value="${desc}" id="desc-jt-${key}" placeholder="Description"></div>
+            <div class="note-row">
+              <div class="note-wrap">
+                <span class="note-icon">NOTE</span>
+                <textarea id="note-jt-${key}" placeholder="Optional note or comment for this item..."></textarea>
+              </div>
+            </div>
+          </div>
+        </td>
+        ${priceCell}
+        <td class="td-rm"></td>`;
+    } else {
+      // Subsequent multi rows: desc + note only, no price/qty/total cells
+      tr.innerHTML=`
+        <td class="td-chk" onclick="toggleScope('jt-${key}')">
+          <div class="chk-btn checked" id="chkbtn-jt-${key}">&#10003;</div>
+          <input type="checkbox" id="chk-jt-${key}" checked style="display:none">
+        </td>
+        <td class="td-desc">
+          <div class="desc-wrap">
+            <div class="desc-main"><input type="text" value="${desc}" id="desc-jt-${key}" placeholder="Description"></div>
+            <div class="note-row">
+              <div class="note-wrap">
+                <span class="note-icon">NOTE</span>
+                <textarea id="note-jt-${key}" placeholder="Optional note or comment for this item..."></textarea>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td class="td-rm"></td>`;
+    }
+    tbody.insertBefore(tr, scdfRow);
+  });
+  calcTotal();
+}
+
+function calcJTRows(){
+  const price=parseFloat(document.getElementById('price-jt-main')?.value)||0;
+  const qty=parseFloat(document.getElementById('qty-jt-main')?.value)||1;
+  const sub=price*qty;
+  const el=document.getElementById('sub-jt-main');
+  if(el)el.textContent=sub>0?'$'+sub.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+  calcTotal();
+}
+
+// ── TERMS & CONDITIONS — dynamic based on job type ───────────────────────
+function rebuildTCList(){
+  const activeTERMS=jtMode==='aa'?TERMS_AA:TERMS_MAA;
+  const tl=document.getElementById('tlist');
+  tl.innerHTML='';
+  activeTERMS.forEach((t,i)=>{
+    const d=document.createElement('div');
+    d.className='trow on';
+    d.id=`tw${i}`;
+    d.innerHTML=`<div class="tc-mark" id="tcm${i}">&#10003;</div><span class="tnum" id="tcn${i}">${i+1}</span><span class="ttxt">${t.replace('{MONTH}','[Month]').replace('{YEAR}','[Year]')}</span>`;
+    d.addEventListener('click',()=>toggleTC(i));
+    tl.appendChild(d);
+  });
+}
+rebuildTCList(); // initial build
+
+function toggleTC(i){
+  const row=document.getElementById(`tw${i}`);
+  const mark=document.getElementById(`tcm${i}`);
+  const isOn=row.classList.contains('on');
+  row.classList.toggle('on',!isOn);
+  row.classList.toggle('off',isOn);
+  mark.innerHTML=isOn?'':'\u2713';
+}
+
+function isTCon(i){return document.getElementById(`tw${i}`).classList.contains('on');}
+
+// ── YEAR FROM QUOTATION DATE ──────────────────────────────────────────────
+function getYY(){
+  const v=document.getElementById('qdate').value;
+  if(!v)return'26';
+  return v.slice(2,4);
+}
+function onDateChange(){
+  document.getElementById('qpre').textContent='Q(L\u0026L'+getYY();
+  syncPreview();
+}
+function syncPreview(){
+  const n=document.getElementById('qnum').value.trim();
+  const yy=getYY();
+  const suf=getTypeSuffix();
+  const sufStr=suf?` (${suf})`:'';
+  document.getElementById('ref-chip').textContent=n?`Q(L&L${yy}${n})${sufStr}`:`Q(L&L${yy}___)${sufStr}`;
+  // Rebuild T&C list when mode changes
+  rebuildTCList();
+}
+
+// ── SCOPE TABLE ──────────────────────────────────────────────────────────
+let sc=0;
+
+// Toggle scope row checkmark
+function toggleScope(id){
+  const chk=document.getElementById(`chk-${id}`);
+  const btn=document.getElementById(`chkbtn-${id}`);
+  const row=document.getElementById(`row-${id}`);
+  chk.checked=!chk.checked;
+  btn.classList.toggle('checked',chk.checked);
+  btn.innerHTML=chk.checked?'\u2713':'';
+  row.classList.toggle('row-on',chk.checked);
+  row.classList.toggle('row-off',!chk.checked);
+  calcTotal();
+}
+
+function calcRow(id){
+  const qty=parseFloat(document.getElementById(`qty-${id}`)?.value)||0;
+  const price=parseFloat(document.getElementById(`price-${id}`)?.value)||0;
+  const sub=qty*price;
+  const el=document.getElementById(`sub-${id}`);
+  if(el)el.textContent=sub>0?'$'+sub.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+  calcTotal();
+}
+
+function calcScdf(){
+  const qty=parseFloat(document.getElementById('qty-scdf')?.value)||0;
+  const sub=qty*90;
+  const el=document.getElementById('sub-scdf');
+  if(el)el.textContent=sub>0?'$'+sub.toFixed(2):'—';
+  calcTotal();
+}
+
+function calcTotal(){
+  let sum=0;
+  // Job-type main price row
+  const jtPrice=document.getElementById('price-jt-main');
+  const jtQty=document.getElementById('qty-jt-main');
+  if(jtPrice){
+    const keys = jtMode==='maa' ? ['maa'] : ['bp','fp','mv','ks'].filter(k=>aaSelected.has(k));
+    const isMulti = keys.length>1;
+    // check at least first key is checked
+    const firstKey=keys[0];
+    const chk=document.getElementById(`chk-jt-${firstKey}`);
+    if(chk&&chk.checked){
+      const p=parseFloat(jtPrice.value)||0;
+      const q=isMulti?1:(parseFloat(jtQty?.value)||1);
+      sum+=p*q;
+    }
+  }
+  // SCDF row
+  if(document.getElementById('chk-scdf')?.checked){
+    sum+=(parseFloat(document.getElementById('qty-scdf')?.value)||0)*90;
+  }
+  for(let i=1;i<=sc;i++){
+    const id=`c${i}`;
+    const chk=document.getElementById(`chk-${id}`);
+    if(!chk||!document.getElementById(`row-${id}`))continue;
+    if(!chk.checked)continue;
+    sum+=(parseFloat(document.getElementById(`qty-${id}`)?.value)||0)*(parseFloat(document.getElementById(`price-${id}`)?.value)||0);
+  }
+  document.getElementById('tval').textContent='$'+sum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function addScope(){
+  sc++;
+  const id=`c${sc}`;
+  const tbody=document.getElementById('scope-body');
+  const scdfRow=document.getElementById('row-scdf');
+  const tr=document.createElement('tr');
+  tr.id=`row-${id}`;
+  tr.className='row-on';
+  tr.innerHTML=`
+    <td class="td-chk" onclick="toggleScope('${id}')">
+      <div class="chk-btn checked" id="chkbtn-${id}">&#10003;</div>
+      <input type="checkbox" id="chk-${id}" checked style="display:none">
+    </td>
+    <td class="td-desc">
+      <div class="desc-wrap">
+        <div class="desc-main"><input type="text" id="desc-${id}" placeholder="Enter scope description..."></div>
+        <div class="note-row">
+          <div class="note-wrap">
+            <span class="note-icon">NOTE</span>
+            <textarea id="note-${id}" placeholder="Optional note or comment..."></textarea>
+          </div>
+        </div>
+        <div class="note-row" style="background:#f0f9ff" id="sec-wrap-${id}">
+          <div class="note-wrap">
+            <span class="note-icon" style="background:#dbeafe;border-color:#bfdbfe;color:#1e40af">SECTION</span>
+            <input type="text" id="section-${id}" placeholder="e.g. Plans Submission / Endorsement of ACMV Plan (A&amp;A only)" style="border:none!important;background:transparent!important;box-shadow:none!important;font-size:11.5px!important;color:#1e40af!important;padding:2px 4px!important">
+          </div>
+        </div>
+      </div>
+    </td>
+    <td class="td-price right"><input type="number" id="price-${id}" placeholder="0.00" min="0" step="0.01" oninput="calcRow('${id}')"></td>
+    <td class="td-qty center"><input type="number" id="qty-${id}" value="1" min="1" step="1" oninput="calcRow('${id}')"></td>
+    <td class="td-sub right"><span class="sub-val" id="sub-${id}">—</span></td>
+    <td class="td-rm"><button class="rmbtn" onclick="rmScope('${id}')">&#215;</button></td>`;
+  tbody.insertBefore(tr,scdfRow);
+}
+
+function rmScope(id){
+  const el=document.getElementById(`row-${id}`);
+  if(el){el.remove();calcTotal();}
+}
+
+// Payment
+let pay='';
+function setPay(v){
+  pay=v;
+  document.getElementById('opt-split5050').classList.toggle('sel',v==='split5050');
+  document.getElementById('opt-split').classList.toggle('sel',v==='split');
+  document.getElementById('opt-full').classList.toggle('sel',v==='full');
+  document.getElementById('opt-custom').classList.toggle('sel',v==='custom');
+  document.getElementById('custom-pay-wrap').style.display=v==='custom'?'block':'none';
+}
+
+function syncCustomPct(){
+  const pct1=parseInt(document.getElementById('custom-pct1').value)||0;
+  const pct2=100-pct1;
+  document.getElementById('custom-pct2-hint').textContent=pct1>0&&pct1<100?`Balance: ${pct2}%`:'Balance: —%';
+}
+
+// Init
+document.getElementById('qdate').valueAsDate=new Date();
+onDateChange();
+
+function g(id){return document.getElementById(id)?.value.trim()||'';}
+function fmtDate(ds){const d=new Date(ds+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});}
+function showToast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',3000);}
+
+function validate(){
+  if(!jtMode){showToast('Please select a job type (M.A.A or A&A).',true);return false;}
+  if(jtMode==='aa'&&aaSelected.size===0){showToast('Please select at least one A&A type (BP/FP/MV/KS).',true);return false;}
+  const fs=['qnum','qdate','cname','cemail','jloc','cmonth'];
+  let ok=true;
+  fs.forEach(id=>{const e=document.getElementById(id);if(!e.value.trim()){e.classList.add('err');ok=false;}else e.classList.remove('err');});
+  if(!pay){showToast('Please select Terms of Payment.',true);return false;}
+  if(pay==='custom'){
+    const pct=parseInt(document.getElementById('custom-pct1').value)||0;
+    if(pct<1||pct>99){showToast('Please enter a valid upfront % (1–99).',true);return false;}
+  }
+  if(!ok){showToast('Please fill in all required fields.',true);return false;}
+  return true;
+}
+
+const SIG_B64='/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABAAFoDASIAAhEBAxEB/8QAHAABAAIDAQEBAAAAAAAAAAAAAAEGAgUHAwQI/8QALhAAAQMDAwIEBgIDAAAAAAAAAQIDBAAFEQYSMQchFCJBURMyQmFicZGhgbHB/8QAGAEAAwEBAAAAAAAAAAAAAAAAAAIEAQP/xAAjEQADAAICAQQDAQAAAAAAAAAAAQIDERIhMQQTQXEjUZHB/9oADAMBAAIRAxEAPwD9l0pSgBUFQFFqCUFRIAAySfStHYrwNQMGZDaWi3/EWhDqzgvgdtyQPpznn2rdN9iukno3BcQXNm5O7nbnv/FZoOa5z1Fs9hS/GTAtfxNUySUW9xl1SXWcnzOkg9kJyT37E9q6DAbcZiNNOuqecQ2lKnFcrIHdR/fNNUJJNfIsXunJ70pSkOgpSlAClKUAKgnFTkV4yn2I7K333m2mkJypa1BKUj3JPFHfwY3orvVSY9D6e3p6Osod8KpCVA4wVeX/ALXySrzH03ZbXZYEbx93XGQiNBZIBOEgFaj9CAe5JqqdTtTvam0hdoGmYLkm3IZJl3VxJDKEpIOGhy4r+quXTixQLZY485tSpc6dHbdkzXVbnHiUg8nhIz2AwBVnBY8Kded+CPm8mXU/09dH6bct0h+83WQJl8mgeJf+htI4abHogf3zVmAxWK3G2wPiLSjJCRuOMn2/dZgg8VLVOntlUSpWkKUqNw96UcmlRuHvU0AKUpQBgR2xVZuWjIN3ufi75MmXOOle5qC8sCOg57eRON2PyzVpqFVs047QtSq6Zrrrb2ZFjlW5ttDbTsdbIQlICQCkjgVoej0vxXT62pUrc5FSqK5k9wptRTg/wKaxnzHdQWnTESUuCm4hxx+Sg4cDaAMobPoo559BXwdJG0W17Uun0BW2DdVqRu5KHAFA/wC6o4/he/v/AAndr3Vr6LrcIcWfGVGmMIfZV8yFjtXtGaQyylpsEIQAEjOcCvQcUqZFOu9g8VW9fXtemNOyL8hCXkRigutLXjejdghP5d+3vVkPFc864h1nT9tuaorsuBb7i1Insto3lTIyCceoGc129PKrLKrwcs9OcbaNjombd9TNx9Sy3zDtzyd8K3tKByg8LdV9SvxHYfc1cE81y7odeIDrt50/bpzUyBFfEu3OoPYx3sq2/barIx6V1Ic1vqcft5XOtGenrlCZNKUrgdxWKuayoRQBS+p0Sa3ChaktcUyptlf8R8FPzPMkYdQn77e4/VabRl3tsvqbMn2yUmTC1BbGpcdaSMbmvIoEe+CMjkYNdMKcjFUWy9MrJZNcnU9oekRN5dU7CSQWCtweZSR9OeSB2qrFkjg5v9dE2TFXNVJexwKUHYYpUpSKxW2haSlSQpJGCD3BHtWVKANHZNJadsl0k3K02mNCkyUhLymU7QoZzxwP8VvMUpTVTp7p7MUqfCFKUpTT/9k=';
+
+// ── EXTRA TERMS & CONDITIONS ─────────────────────────────────────────────
+let etcCount=0;
+function addETC(){
+  etcCount++;
+  const id=etcCount;
+  const list=document.getElementById('etc-list');
+  const div=document.createElement('div');
+  div.className='etc-row etc-on';
+  div.id=`etc-row-${id}`;
+  div.innerHTML=`
+    <div class="etc-chk-btn on" id="etc-chk-${id}" onclick="toggleETC(${id})">&#10003;</div>
+    <textarea class="etc-textarea" id="etc-txt-${id}" placeholder="Type additional clause ${id}..." rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button class="etc-rm" onclick="rmETC(${id})" title="Remove">&#215;</button>`;
+  list.appendChild(div);
+  // auto-focus
+  setTimeout(()=>document.getElementById(`etc-txt-${id}`)?.focus(),50);
+}
+function toggleETC(id){
+  const row=document.getElementById(`etc-row-${id}`);
+  const btn=document.getElementById(`etc-chk-${id}`);
+  const isOn=row.classList.contains('etc-on');
+  row.classList.toggle('etc-on',!isOn);
+  row.classList.toggle('etc-off',isOn);
+  btn.classList.toggle('on',!isOn);
+  btn.innerHTML=isOn?'':'&#10003;';
+}
+function rmETC(id){
+  const el=document.getElementById(`etc-row-${id}`);
+  if(el)el.remove();
+}
+
+function makePDF(){
+  if(!validate())return;
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+
+  const PW=210, PH=297, ML=20, MR=20, CW=PW-ML-MR;
+  const LH=5.2;    // body line height ~11pt
+  const LH2=4.2;   // page 2 tighter line height
+  const TC_LH=4.3; // T&C list line height
+  const TC_GAP=0.6;// gap between T&C items
+
+  function sf(bold,sz){
+    doc.setFont('helvetica',bold?'bold':'normal');
+    doc.setFontSize(sz||11);
+    doc.setTextColor(0,0,0);
+  }
+  function hline(y,x1,x2,lw){
+    doc.setDrawColor(0,0,0);
+    doc.setLineWidth(lw||0.3);
+    doc.line(x1??ML,y,x2??(PW-MR),y);
+  }
+  function dt(text,x,y,opts={}){
+    sf(opts.b||false,opts.sz||11);
+    doc.text(String(text),x,y,{align:opts.a||'left'});
+  }
+  function wt(text,x,y,maxW,opts={}){
+    sf(opts.b||false,opts.sz||11);
+    const lines=doc.splitTextToSize(text,maxW);
+    lines.forEach((l,i)=>doc.text(l,x,y+i*(opts.lh||LH)));
+    return y+lines.length*(opts.lh||LH);
+  }
+
+  // ── Collect values ───────────────────────────────────────────────────
+  const qdate=g('qdate'),yy=getYY(),qnum=g('qnum');
+  const sal=g('sal'),cname=g('cname'),cco=g('cco');
+  const cadd1=g('cadd1'),cadd2=g('cadd2'),cadd3=g('cadd3');
+  const ctel=g('ctel'),cattn=g('cattn'),cattnhp=g('cattnhp'),cemail=g('cemail');
+  const jloc=g('jloc'),jdesc=g('jdesc'),month=g('cmonth'),cyear=g('cyear');
+  const dateStr=fmtDate(qdate);
+  const typeSuf=getTypeSuffix();
+  const ref=`Q(L&L${yy}${qnum})`;
+  const fullRef=`${ref} ${jloc} (${typeSuf})`;
+
+  // ── Scope rows ───────────────────────────────────────────────────────
+  const rows=[];
+  const isMultiJT = jtMode==='aa' && aaSelected.size>1;
+  const jtKeys = jtMode==='maa' ? ['maa'] : ['bp','fp','mv','ks'].filter(k=>aaSelected.has(k));
+  const jtMainPrice = parseFloat(document.getElementById('price-jt-main')?.value)||0;
+  const jtMainQty = isMultiJT ? 1 : (parseFloat(document.getElementById('qty-jt-main')?.value)||1);
+  const jtMainSub = jtMainPrice * jtMainQty;
+
+  jtKeys.forEach((key,idx)=>{
+    const chk=document.getElementById(`chk-jt-${key}`);
+    if(!chk||!chk.checked) return;
+    const desc=g(`desc-jt-${key}`)||JT_DESC[key]||key;
+    const note=g(`note-jt-${key}`)||'';
+    if(idx===0){
+      // First row carries price/qty/total (or all in merged scenario)
+      rows.push({desc, note, qty: jtMainQty, price: jtMainPrice, sub: jtMainSub, isFirst:true, isMulti:isMultiJT, spanCount:jtKeys.length});
+    } else {
+      // Subsequent rows: desc only, no price cells (merged)
+      rows.push({desc, note, qty:null, price:null, sub:null, isMerged:true});
+    }
+  });
+
+  for(let i=1;i<=sc;i++){
+    const id=`c${i}`;
+    const chk=document.getElementById(`chk-${id}`);
+    if(!chk||!document.getElementById(`row-${id}`)||!chk.checked)continue;
+    const desc=g(`desc-${id}`)||`Scope item ${i}`;
+    const note=g(`note-${id}`)||'';
+    const qty=parseFloat(document.getElementById(`qty-${id}`)?.value)||1;
+    const price=parseFloat(document.getElementById(`price-${id}`)?.value)||0;
+    rows.push({desc,note,qty,price,sub:qty*price,section:document.getElementById(`section-${id}`)?.value||''});
+  }
+  // SCDF fee
+  const scdfChk=document.getElementById('chk-scdf');
+  if(scdfChk?.checked){
+    const scdfQty=parseFloat(document.getElementById('qty-scdf')?.value)||1;
+    rows.push({desc:'Fees make payable to S.C.D.F.',note:'',qty:scdfQty,price:90,sub:90*scdfQty,fixed:true});
+  }
+  const total=rows.reduce((s,r)=>s+(r.sub||0),0);
+
+  const payLines=pay==='split5050'
+    ?['Initial 50% (non-refundable) upon confirmation of work, we shall start work only upon receipt of the payment.',
+      'Balance 50% upon completion of work, within 7 days upon receipt of our invoice.']
+    :pay==='split'
+    ?['Initial 80% (non-refundable) upon confirmation of work, we shall start work only upon receipt of the payment.',
+      'Balance 20% upon completion of work, within 7 days upon receipt of our invoice.']
+    :pay==='custom'
+    ?(()=>{
+      const pct1=parseInt(document.getElementById('custom-pct1').value)||0;
+      const pct2=100-pct1;
+      const note1=(document.getElementById('custom-note1').value.trim())||'non-refundable';
+      const durNum=document.getElementById('custom-dur-num').value.trim()||'7';
+      const durUnit=document.getElementById('custom-dur-unit').value||'days';
+      return[
+        `Initial ${pct1}% (${note1}) upon confirmation of work, we shall start work only upon receipt of the payment.`,
+        `Balance ${pct2}% upon completion of work, within ${durNum} ${durUnit} upon receipt of our invoice.`
+      ];
+    })()
+    :['Full payment upon completion of work, within 7 days upon receipt of our invoice.'];
+
+  // T&C: use AA set if AA mode, else MAA
+  const activeTERMS=jtMode==='aa'?TERMS_AA:TERMS_MAA;
+  const selTC=activeTERMS.filter((_,i)=>isTCon(i))
+    .map(t=>t.replace('{MONTH}',month).replace('{YEAR}',cyear));
+
+  // Extra T&C
+  const extraTC=[];
+  for(let i=1;i<=etcCount;i++){
+    const row=document.getElementById(`etc-row-${i}`);
+    if(!row)continue;
+    if(!row.classList.contains('etc-on'))continue;
+    const txt=(document.getElementById(`etc-txt-${i}`)?.value||'').trim();
+    if(txt)extraTC.push(txt);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PAGE 1
+  // ═══════════════════════════════════════════════════════════════════
+  let y=18;
+
+  // ── Company header — LEFT aligned ────────────────────────────────────
+  sf(true,20);
+  doc.text('L&L Engineering Consultant',ML,y); y+=8;
+
+  sf(false,11);
+  doc.text("Address: 1 Yishun Industrial Street 1 #05-25 A'Posh Bizhub Singapore 768160",ML,y); y+=LH;
+  doc.text('Tel: 67348727          Email: llengineeringc@gmail.com',ML,y); y+=LH;
+  doc.text('Co. Reg No. 53363618C',ML,y); y+=3;
+  y+=LH;
+
+  // ── Our ref & date ───────────────────────────────────────────────────
+  sf(false,11);
+  const rlw=doc.getTextWidth('Our ref:  ');
+  dt('Our ref:',ML,y);
+  dt(`${ref} ${jloc} (${typeSuf})`,ML+rlw,y);
+  dt(dateStr,PW-MR,y,{a:'right'});
+  y+=LH*1.6;
+
+  // ── Client block ─────────────────────────────────────────────────────
+  if(cco){y=wt(cco,ML,y,CW*0.65);y+=1;}
+  if(cadd1){dt(cadd1,ML,y);y+=LH;}
+  if(cadd2){dt(cadd2,ML,y);y+=LH;}
+  if(cadd3){dt(cadd3,ML,y);y+=LH;}
+  if(ctel){dt(`Tel : ${ctel}`,ML,y);y+=LH;}
+  if(cemail){dt(`Email : ${cemail}`,ML,y);y+=LH;}
+  if(cattn){dt(cattnhp?`Attention: ${cattn} (HP : ${cattnhp})`:`Attention: ${cattn}`,ML,y);y+=LH;}
+  y+=LH*0.6;
+
+  // ── Dear ─────────────────────────────────────────────────────────────
+  const salStr=sal==='Sir/Madam'?'Sirs/Madam':`${sal} ${cname}`;
+  dt(`Dear ${salStr},`,ML,y); y+=LH*1.5;
+
+  // ── Re: block — plan-specific text ───────────────────────────────────
+  sf(true,11);
+  doc.text('Re:',ML,y);
+  const reIndent=ML+14;
+  const reText=getReText();
+  const reLines=doc.splitTextToSize(reText,CW-14);
+  reLines.forEach(l=>{doc.text(l,reIndent,y);y+=LH;});
+  const reLocStr=jdesc ? `${jloc.toUpperCase()} (${jdesc.toUpperCase()})` : jloc.toUpperCase();
+  const locLines=doc.splitTextToSize(reLocStr,CW-14);
+  locLines.forEach(l=>{doc.text(l,reIndent,y);y+=LH;});
+  y+=LH*0.5;
+
+  // ── Opening line ──────────────────────────────────────────────────────
+  sf(false,11);
+  dt('As per your request, we are furnishing hereunder the quotation:',ML,y); y+=LH*1.4;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // TABLE — Columns: No.(8) | Description(auto) | Price per unit(32) | Qty(20) | Total(28)
+  const cNo=8,cUP=32,cQty=20,cAmt=28;
+  const cDesc=CW-cNo-cUP-cQty-cAmt;
+  const xNo=ML, xDesc=ML+cNo;
+  const xUPL=xDesc+cDesc, xQtyL=xUPL+cUP, xAmtL=xQtyL+cQty;
+  const ROW_H=7.5, PAD=2.0;
+  const isAA=jtMode==='aa';
+
+  // "Scope of work:" — merged full-width header cell
+  doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
+  doc.rect(ML,y,CW,ROW_H,'S');
+  sf(true,11);
+  doc.text('Scope of work:',ML+1.5,y+ROW_H*0.67);
+  y+=ROW_H;
+
+  // Column header row
+  function drawCell(x,w,cy,h,text,bold,aR){
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+    doc.rect(x,cy,w,h,'S');
+    if(text!==null){
+      sf(bold,11);
+      doc.text(String(text),aR?(x+w-1.5):(x+1.5),cy+h*0.67,{align:aR?'right':'left'});
+    }
+  }
+  drawCell(xNo,   cNo,   y,ROW_H,'No.',              true,false);
+  drawCell(xDesc, cDesc, y,ROW_H,'Description',       true,false);
+  drawCell(xUPL,  cUP,   y,ROW_H,'Price per unit ($)',true,true);
+  drawCell(xQtyL, cQty,  y,ROW_H,'Quantity',          true,true);
+  drawCell(xAmtL, cAmt,  y,ROW_H,'Total',             true,true);
+  y+=ROW_H;
+
+  // Track section headers for AA mode
+  let lastSection='';
+  let rowNum=0;
+
+  // Calculate merged block height for multi-JT rows
+  const multiJTKeys = jtMode==='aa' && isMultiJT ? jtKeys : [];
+  let mergedBlockH=0;
+  if(isMultiJT){
+    // pre-calc total height of all jt desc rows combined
+    rows.filter(r=>r.isFirst||r.isMerged).forEach(row=>{
+      sf(false,11);
+      const dLines=doc.splitTextToSize(row.desc,cDesc-3);
+      let nLines=[];
+      if(row.note){sf(true,11);const nlw=doc.getTextWidth('Note : ');sf(false,11);nLines=doc.splitTextToSize(row.note,cDesc-3-nlw);}
+      const tLines=dLines.length+(nLines.length>0?nLines.length+0.3:0);
+      mergedBlockH+=Math.max(ROW_H,tLines*LH+PAD*2);
+    });
+  }
+
+  let mergedPriceCellDrawn=false;
+  let mergedStartY=y;
+
+  // Data rows
+  rows.forEach((row,i)=>{
+    if(row.isFirst&&isMultiJT) mergedStartY=y;
+
+    // Section header row (AA mode only)
+    if(isAA&&row.section&&row.section!==lastSection){
+      lastSection=row.section;
+      doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+      doc.rect(ML,y,CW,ROW_H,'S');
+      sf(true,11);
+      doc.text(row.section,ML+1.5,y+ROW_H*0.67);
+      y+=ROW_H;
+    }
+
+    sf(false,11);
+    const dLines=doc.splitTextToSize(row.desc,cDesc-3);
+    let nLines=[];
+    if(row.note){
+      sf(true,11);const nlw=doc.getTextWidth('Note : ');sf(false,11);
+      nLines=doc.splitTextToSize(row.note,cDesc-3-nlw);
+    }
+    const tLines=dLines.length+(nLines.length>0?nLines.length+0.3:0);
+    const rh=Math.max(ROW_H,tLines*LH+PAD*2);
+    const rowY=y;
+
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+    doc.rect(xNo,rowY,cNo,rh,'S');
+    doc.rect(xDesc,rowY,cDesc,rh,'S');
+
+    if(row.isMerged){
+      // No price/qty/total cells — they are part of the merged block above
+    } else if(row.isFirst && isMultiJT){
+      // Draw merged price/qty/total spanning full block height
+      doc.rect(xUPL,rowY,cUP,mergedBlockH,'S');
+      doc.rect(xQtyL,rowY,cQty,mergedBlockH,'S');
+      doc.rect(xAmtL,rowY,cAmt,mergedBlockH,'S');
+      // Draw values centered in merged cell
+      const midY=rowY+mergedBlockH/2;
+      sf(false,11);
+      const priceStr=row.price>0?'$'+row.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+      doc.text(priceStr,xUPL+cUP-1.5,midY,{align:'right'});
+      doc.text('Lump Sum',xQtyL+cQty-1.5,midY,{align:'right'});
+      sf(true,11);
+      const subStr=row.sub>0?'$'+row.sub.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+      doc.text(subStr,xAmtL+cAmt-1.5,midY,{align:'right'});
+    } else {
+      // Normal single row
+      doc.rect(xUPL,rowY,cUP,rh,'S');
+      doc.rect(xQtyL,rowY,cQty,rh,'S');
+      doc.rect(xAmtL,rowY,cAmt,rh,'S');
+    }
+
+    const tY=rowY+PAD+3.2;
+    rowNum++;
+    sf(false,11);doc.text(String(rowNum),xNo+1.5,tY);
+    dLines.forEach((l,li)=>{sf(false,11);doc.text(l,xDesc+1.5,tY+li*LH);});
+    if(nLines.length){
+      const noteY=tY+dLines.length*LH;
+      sf(true,11);const nlw=doc.getTextWidth('Note : ');
+      doc.text('Note : ',xDesc+1.5,noteY);
+      sf(false,11);nLines.forEach((l,li)=>doc.text(l,xDesc+1.5+nlw,noteY+li*LH));
+    }
+
+    if(!row.isMerged && !(row.isFirst && isMultiJT)){
+      sf(false,11);
+      const priceStr=row.price!=null?'$'+row.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+      const qtyStr=row.qty!=null?String(row.qty):'—';
+      doc.text(priceStr,xUPL+cUP-1.5,tY,{align:'right'});
+      doc.text(qtyStr,xQtyL+cQty-1.5,tY,{align:'right'});
+      sf(true,11);
+      const subStr=(row.sub!=null&&row.sub>0)?'$'+row.sub.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—';
+      doc.text(subStr,xAmtL+cAmt-1.5,tY,{align:'right'});
+    }
+    y+=rh;
+  });
+
+  // Total row — No+Desc+Price+Qty merged, Total value in last cell
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+  const mergedLabelW = cNo+cDesc+cUP+cQty;
+  doc.rect(xNo,y,mergedLabelW,ROW_H,'S');
+  doc.rect(xAmtL,y,cAmt,ROW_H,'S');
+  const tTY=y+ROW_H*0.67;
+  sf(false,11);doc.text(isAA?'Total (SGD) :':'Total:',xAmtL-1.5,tTY,{align:'right'});
+  sf(true,11);doc.text('$'+total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','),xAmtL+cAmt-1.5,tTY,{align:'right'});
+  y+=ROW_H+3;
+
+  // Page 1 footer
+  sf(false,9);doc.text('Page 1 of 2',PW/2,PH-8,{align:'center'});
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PAGE 2 — smaller font (10pt), tight spacing, guaranteed 2 pages
+  // Matches image 2 exactly: underlined headings via font style,
+  // no drawn lines under headings, T&C fits with tighter spacing
+  // ═══════════════════════════════════════════════════════════════════
+  doc.addPage();
+  const P2SZ=11;   // font size 11 for page 2
+  const P2LH=5.0;  // line height for 11pt
+  const P2TC=4.6;  // T&C list line height
+  const P2GAP=0.5; // gap between T&C items
+  y=12;
+
+  // Page 2 header
+  sf(false,9);doc.text(`Page 2: ${fullRef}`,ML,y);y+=7;
+
+  // "Terms and conditions:" — bold + text underline only
+  sf(true,P2SZ);
+  doc.text('Terms and conditions:',ML,y);
+  const tcW=doc.getTextWidth('Terms and conditions:');
+  hline(y+0.8,ML,ML+tcW,0.35);
+  y+=P2LH*1.1;
+
+  // T&C numbered list — 11pt
+  selTC.forEach((term,i)=>{
+    sf(false,P2SZ);
+    const lines=doc.splitTextToSize(term,CW-10);
+    doc.text(String(i+1),ML+6,y,{align:'right'});
+    lines.forEach((l,li)=>doc.text(l,ML+8,y+li*P2TC));
+    y+=lines.length*P2TC+P2GAP;
+  });
+
+  // Extra T&C — numbered continuing from standard clauses
+  if(extraTC.length>0){
+    const offset=selTC.length;
+    extraTC.forEach((term,i)=>{
+      sf(false,P2SZ);
+      const lines=doc.splitTextToSize(term,CW-10);
+      sf(false,P2SZ);doc.text(String(offset+i+1),ML+6,y,{align:'right'});
+      sf(false,P2SZ);lines.forEach((l,li)=>doc.text(l,ML+8,y+li*P2TC));
+      y+=lines.length*P2TC+P2GAP;
+    });
+  }
+
+  y+=2;
+
+  // "Note:" — bold + text underline
+  sf(true,P2SZ);
+  doc.text('Note:',ML,y);
+  const nW=doc.getTextWidth('Note:');
+  hline(y+0.8,ML,ML+nW,0.35);
+  y+=P2LH*1.0;
+  sf(false,P2SZ);
+  doc.text('The validity of this quote is 3 weeks from the date of this quotation.',ML,y);
+  y+=P2LH*1.3;
+
+  // "Terms of Payment:" — bold + text underline
+  y+=P2LH*0.3;
+  sf(true,P2SZ);
+  doc.text('Terms of Payment:',ML,y);
+  const tpW=doc.getTextWidth('Terms of Payment:');
+  hline(y+0.8,ML,ML+tpW,0.35);
+  y+=P2LH*1.1;
+  sf(false,P2SZ);
+  payLines.forEach(line=>{
+    const pLines=doc.splitTextToSize(line,CW);
+    pLines.forEach(l=>{doc.text(l,ML,y);y+=P2LH;});
+  });
+  y+=P2LH*0.8;
+
+  // Signature block
+  y+=P2LH*1.0;
+
+  const midX=PW/2+5;
+  sf(false,P2SZ);
+  doc.text('Thank you.',ML,y);doc.text('Accepted by :',midX,y);y+=P2LH*2.2;
+  doc.text('Yours faithfully,',ML,y);doc.text('Name : _______________',midX,y);y+=P2LH;
+  doc.text('L&L Engineering Consultant',ML,y);doc.text('Contact No.___________',midX,y);
+  y+=P2LH*2.0;
+
+  try{doc.addImage('data:image/png;base64,'+SIG_B64,'JPEG',ML,y,22,16);}catch(e){}
+  sf(false,P2SZ);
+  doc.text('Signature:____________',midX,y+5);
+  y+=17;
+  doc.text('Lee N.S.',ML,y);doc.text('Date : _______________',midX,y);
+  y+=P2LH*0.5;
+
+  sf(false,9);doc.text('Page 2 of 2',PW/2,PH-8,{align:'center'});
+
+  const fn=`${ref}_${jloc.replace(/[^a-zA-Z0-9]/g,'_')}_(${typeSuf}).pdf`;
+  doc.save(fn);
+  showToast('\u2713 '+ref+' generated!');
+}
+</script>
+</body>
+</html>
